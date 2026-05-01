@@ -1,5 +1,14 @@
-package com.example.mochilaseguridad
+package com.example.mochila
 
+import android.media.MediaPlayer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.animation.core.*
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -20,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+
 
 class MainActivity : ComponentActivity() {
 
@@ -51,137 +61,245 @@ fun PantallaPrincipal(context: Context) {
 
     var sistemaActivo by remember { mutableStateOf(true) }
     var estado by remember { mutableStateOf("Seguro") }
+    var bluetoothConectado by remember { mutableStateOf(false) }
     var historial by remember { mutableStateOf(listOf<String>()) }
 
+    fun horaActual(): String {
+        val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+        return sdf.format(java.util.Date())
+    }
+
     fun agregarEvento(evento: String) {
-        historial = listOf(evento) + historial
+        historial = listOf("${horaActual()} - $evento") + historial
     }
 
-    fun vibrar() {
-        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
-        }
+    fun sonidoAlerta() {
+        val mediaPlayer = MediaPlayer.create(
+            context,
+            android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI
+        )
+        mediaPlayer.start()
     }
-
-    fun notificar() {
-        val builder = NotificationCompat.Builder(context, "alertas")
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("🚨 Alerta de Robo")
-            .setContentText("Se detectó apertura sospechosa en la mochila")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-
-        with(NotificationManagerCompat.from(context)) {
-            notify(1, builder.build())
-        }
-    }
-
-
-
-    fun procesarDatoBluetooth(dato: String) {
-        when (dato) {
-            "0" -> {
-                estado = "Seguro"
-                agregarEvento("Lectura normal desde sensores")
-            }
-            "1" -> {
-                estado = "Advertencia"
-                agregarEvento("Sensor magnético activado")
-            }
-            "2" -> {
-                estado = "Advertencia"
-                agregarEvento("Sensor óptico activado")
-            }
-            "3" -> {
-                estado = "Alerta"
-                agregarEvento("Apertura confirmada por ambos sensores")
-
-                if (sistemaActivo) {
-                    vibrar()
-                    notificar()
-                }
-            }
-        }
-    }
-
-
-
-
-
 
 
     val colorEstado = when (estado) {
-        "Seguro" -> Color(0xFF4CAF50)
-        "Advertencia" -> Color(0xFFFFC107)
-        "Alerta" -> Color(0xFFF44336)
-        else -> Color.Gray
+        "Seguro" -> Color(0xFF4DD6A7)
+        "Advertencia" -> Color(0xFFE6B450)
+        "Alerta" -> Color(0xFFE85D75)
+        "Desactivado" -> Color(0xFF8A8F98)
+        else -> Color.White
     }
 
-    Box(
+
+    val textoEstado = when (estado) {
+        "Seguro" -> "Sistema monitoreando"
+        "Advertencia" -> "Lectura sospechosa"
+        "Alerta" -> "Apertura no autorizada"
+        "Desactivado" -> "Sistema inactivo"
+        else -> "Estado desconocido"
+    }
+
+    // 🔥 ANIMACIÓN DE ALERTA
+    val infiniteTransition = rememberInfiniteTransition()
+    val alphaAnim by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    val alphaFinal = if (estado == "Alerta") alphaAnim else 1f
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212)),
-        contentAlignment = Alignment.Center
+            .background(Color(0xFF070A0F))
+            .padding(horizontal = 22.dp)
+            .padding(top = 65.dp, bottom = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-            Text("Mochila Segura", color = Color.White, fontSize = 26.sp)
+        Text("BACK UP", color = Color.White, fontSize = 34.sp)
 
-            Spacer(modifier = Modifier.height(30.dp))
+        Text(
+            "Seguridad inteligente",
+            color = Color(0xFF8B95A1),
+            fontSize = 13.sp
+        )
 
-            Text(estado, color = colorEstado, fontSize = 40.sp)
+        Spacer(modifier = Modifier.height(25.dp))
 
-            Spacer(modifier = Modifier.height(30.dp))
+        // 🔐 INDICADOR GENERAL
+        Text(
+            text = if (sistemaActivo) "Sistema activo" else "Sistema desactivado",
+            color = if (sistemaActivo) Color(0xFF4DD6A7) else Color(0xFFE85D75),
+            fontSize = 13.sp
+        )
 
-            Button(onClick = {
-                sistemaActivo = !sistemaActivo
-                estado = if (!sistemaActivo) "Desactivado" else "Seguro"
-                agregarEvento("Sistema ${if (sistemaActivo) "Activado" else "Desactivado"}")
-            }) {
-                Text(if (sistemaActivo) "Desactivar" else "Activar")
-            }
+        Spacer(modifier = Modifier.height(20.dp))
 
-            Spacer(modifier = Modifier.height(30.dp))
+        // 🔵 TARJETA ESTADO (CENTRADA + ANIMADA)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111722)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
 
-            // 🔧 SIMULACIÓN
+                Text("ESTADO DEL SISTEMA", color = Color(0xFF7D8793), fontSize = 12.sp)
 
-            Button(onClick = {
-                estado = "Advertencia"
-                agregarEvento("Advertencia: 1 sensor activado")
-            }) {
-                Text("Simular 1 sensor")
-            }
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
+                Icon(
+                    imageVector = when (estado) {
+                        "Seguro" -> Icons.Default.Lock
+                        "Advertencia" -> Icons.Default.Warning
+                        "Alerta" -> Icons.Default.Report
+                        else -> Icons.Default.Lock
+                    },
+                    contentDescription = null,
+                    tint = colorEstado.copy(alpha = alphaFinal),
+                    modifier = Modifier.size(50.dp)
+                )
 
-            Button(onClick = {
-                estado = "Alerta"
-                agregarEvento("ALERTA: posible robo")
+                Text(
+                    estado,
+                    color = colorEstado,
+                    fontSize = 38.sp
+                )
 
-                if (sistemaActivo) {
-                    vibrar()
-                    notificar()
-                }
-            }) {
-                Text("Simular robo")
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Button(onClick = {
-                estado = "alerta"
-                agregarEvento("Estado seguro")
-            }) {
-                Text("Reset")
-            }
-
-            Spacer(modifier = Modifier.height(30.dp))
-
-            Text("Historial", color = Color.White)
-
-            historial.take(5).forEach {
-                Text(it, color = Color.LightGray, fontSize = 12.sp)
+                Text(
+                    textoEstado,
+                    color = Color(0xFFB0B7C3),
+                    fontSize = 14.sp
+                )
             }
         }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // 📡 BLUETOOTH PRO
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111722)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(18.dp)) {
+                Text("Conectividad", color = Color(0xFF8B95A1), fontSize = 12.sp)
+
+                Text(
+                    if (bluetoothConectado) "Conectado a BACKUP-ESP32"
+                    else "Sin conexión",
+                    color = if (bluetoothConectado) Color(0xFF4DD6A7) else Color(0xFFE6B450),
+                    fontSize = 16.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = {
+                sistemaActivo = !sistemaActivo
+                estado = if (!sistemaActivo) "Desactivado" else "Seguro"
+                agregarEvento(if (sistemaActivo) "Sistema activado" else "Sistema desactivado")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (sistemaActivo) Color(0xFF1C222B) else Color(0xFF4DD6A7),
+                contentColor = Color.White
+            )
+        ) {
+            Text(if (sistemaActivo) "Desactivar sistema" else "Activar sistema")
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Button(
+            onClick = {
+                bluetoothConectado = !bluetoothConectado
+                agregarEvento(if (bluetoothConectado) "Dispositivo conectado" else "Dispositivo desconectado")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1C222B),
+                contentColor = Color.White
+            )
+        ) {
+            Text("Simular conexión")
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Button(
+            onClick = {
+                estado = "Advertencia"
+                agregarEvento("Lectura sospechosa detectada")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFE6B450),
+                contentColor = Color.Black
+            )
+        ) {
+            Text("Simular advertencia")
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Button(
+            onClick = {
+                estado = "Alerta"
+                agregarEvento("ALERTA: apertura confirmada")
+
+                if (sistemaActivo) {
+                    sonidoAlerta()
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFE85D75),
+                contentColor = Color.White
+            )
+        ) {
+            Text("Simular alerta")
+        }
+
+        Spacer(modifier = Modifier.height(22.dp))
+
+        // 📊 HISTORIAL PRO
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111722)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(18.dp)) {
+
+                Text("Historial de eventos", color = Color.White, fontSize = 18.sp)
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (historial.isEmpty()) {
+                    Text("Sin registros", color = Color(0xFF8B95A1))
+                } else {
+                    historial.take(4).forEach {
+                        Text("• $it", color = Color(0xFFB0B7C3), fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // 📚 TEXTO EDUCATIVO
+        Text(
+            text = "Aplicación desarrollada con fines educativos, orientada a la detección de accesos no autorizados mediante sensores y comunicación inalámbrica.",
+            color = Color(0xFF68707C),
+            fontSize = 11.sp
+        )
     }
 }
