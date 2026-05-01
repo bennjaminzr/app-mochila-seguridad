@@ -56,6 +56,48 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
+@Composable
+fun PantallaAcerca(onVolver: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF070A0F))
+            .padding(horizontal = 22.dp)
+            .padding(top = 70.dp, bottom = 20.dp)
+    ) {
+
+        Button(
+            onClick = onVolver,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1C222B),
+                contentColor = Color.White
+            )
+        ) {
+            Text("← Volver")
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text("Acerca del proyecto", color = Color.White, fontSize = 26.sp)
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            "BACK UP es una aplicación desarrollada con fines educativos, orientada a la detección de accesos no autorizados en mochilas mediante sensores físicos conectados a un ESP32.",
+            color = Color(0xFFB0B7C3)
+        )
+
+        Spacer(modifier = Modifier.height(15.dp))
+
+        Text(
+            "El sistema combina múltiples lecturas para reducir falsos positivos y mejorar la confiabilidad de las alertas.",
+            color = Color(0xFFB0B7C3)
+        )
+    }
+}
+
+
 @Composable
 fun PantallaPrincipal(context: Context) {
 
@@ -63,6 +105,7 @@ fun PantallaPrincipal(context: Context) {
     var estado by remember { mutableStateOf("Seguro") }
     var bluetoothConectado by remember { mutableStateOf(false) }
     var historial by remember { mutableStateOf(listOf<String>()) }
+    var mostrarAcerca by remember { mutableStateOf(false) }
 
     fun horaActual(): String {
         val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
@@ -74,11 +117,21 @@ fun PantallaPrincipal(context: Context) {
     }
 
     fun sonidoAlerta() {
+
+
+
         val mediaPlayer = MediaPlayer.create(
             context,
             android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI
         )
         mediaPlayer.start()
+    }
+
+    if (mostrarAcerca) {
+        PantallaAcerca(
+            onVolver = { mostrarAcerca = false }
+        )
+        return
     }
 
 
@@ -292,6 +345,19 @@ fun PantallaPrincipal(context: Context) {
                 }
             }
         }
+
+        TextButton(
+            onClick = {
+                mostrarAcerca = true
+            }
+        ) {
+            Text(
+                "Acerca del proyecto",
+                color = Color(0xFF68707C),
+                fontSize = 12.sp
+            )
+        }
+
 
         Spacer(modifier = Modifier.height(18.dp))
 
