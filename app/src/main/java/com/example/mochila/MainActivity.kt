@@ -1,8 +1,9 @@
 package com.example.mochila
 
+import android.media.AudioAttributes
 import android.media.MediaPlayer
-import android.media.AudioManager
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.core.*
 import android.app.NotificationChannel
@@ -34,22 +35,23 @@ import androidx.compose.ui.unit.sp
 
 // ─── Paleta de colores centralizada ───────────────────────────────────────────
 private object AppColors {
-    val background   = Color(0xFF070A0F)
-    val surface      = Color(0xFF0E1420)
+    val background    = Color(0xFF070A0F)
+    val surface       = Color(0xFF0E1420)
     val surfaceBorder = Color(0xFF1C2333)
-    val textPrimary  = Color(0xFFE8EDF4)
+    val textPrimary   = Color(0xFFE8EDF4)
     val textSecondary = Color(0xFF6B7585)
-    val textMuted    = Color(0xFF3D4655)
-    val green        = Color(0xFF2DD4A0)
-    val greenDim     = Color(0xFF1A5C45)
-    val amber        = Color(0xFFF0B429)
-    val amberDim     = Color(0xFF5C450D)
-    val red          = Color(0xFFEF4B6C)
-    val redDim       = Color(0xFF5C1525)
-    val blue         = Color(0xFF4F8EF7)
-    val inactive     = Color(0xFF2A3040)
+    val textMuted     = Color(0xFF3D4655)
+    val green         = Color(0xFF2DD4A0)
+    val greenDim      = Color(0xFF1A5C45)
+    val amber         = Color(0xFFF0B429)
+    val amberDim      = Color(0xFF5C450D)
+    val red           = Color(0xFFEF4B6C)
+    val redDim        = Color(0xFF5C1525)
+    val blue          = Color(0xFF4F8EF7)
+    val inactive      = Color(0xFF2A3040)
 }
 
+// ─── Activity principal ───────────────────────────────────────────────────────
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,7 +86,6 @@ fun PantallaAcerca(onVolver: () -> Unit) {
             .padding(horizontal = 24.dp)
             .padding(top = 60.dp, bottom = 40.dp)
     ) {
-        // Header con botón volver
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = onVolver,
@@ -94,8 +95,9 @@ fun PantallaAcerca(onVolver: () -> Unit) {
                     .background(AppColors.surface)
                     .border(1.dp, AppColors.surfaceBorder, CircleShape)
             ) {
+                // ✅ FIX 1: AutoMirrored reemplaza el deprecated Icons.Filled.ArrowBack
                 Icon(
-                    Icons.Default.ArrowBack,
+                    Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Volver",
                     tint = AppColors.textPrimary,
                     modifier = Modifier.size(18.dp)
@@ -112,7 +114,6 @@ fun PantallaAcerca(onVolver: () -> Unit) {
 
         Spacer(Modifier.height(36.dp))
 
-        // Logo / nombre
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -161,7 +162,6 @@ fun PantallaAcerca(onVolver: () -> Unit) {
 
         Spacer(Modifier.height(24.dp))
 
-        // Descripción
         InfoCard(
             titulo = "Descripción",
             contenido = "BACK UP es una aplicación educativa orientada a la detección de accesos no autorizados en mochilas, mediante sensores físicos conectados a un microcontrolador ESP32 vía Bluetooth."
@@ -176,14 +176,13 @@ fun PantallaAcerca(onVolver: () -> Unit) {
 
         Spacer(Modifier.height(12.dp))
 
-        // Stack tecnológico
         SectionCard(titulo = "Stack tecnológico") {
             listOf(
                 "Kotlin + Jetpack Compose" to "Interfaz nativa Android",
-                "ESP32 (Bluetooth)" to "Microcontrolador IoT",
-                "Sensores de apertura" to "Detección física",
-                "Material Design 3" to "Sistema de diseño"
-            ).forEach { (tech, desc) ->
+                "ESP32 (Bluetooth)"        to "Microcontrolador IoT",
+                "Sensores de apertura"     to "Detección física",
+                "Material Design 3"        to "Sistema de diseño"
+            ).forEachIndexed { index, (tech, desc) ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -202,8 +201,10 @@ fun PantallaAcerca(onVolver: () -> Unit) {
                         Text(desc, color = AppColors.textSecondary, fontSize = 12.sp)
                     }
                 }
-                if (tech != "Material Design 3")
-                    Divider(color = AppColors.surfaceBorder, thickness = 0.5.dp)
+                // ✅ FIX 2: HorizontalDivider reemplaza el deprecated Divider
+                if (index < 3) {
+                    HorizontalDivider(color = AppColors.surfaceBorder, thickness = 0.5.dp)
+                }
             }
         }
 
@@ -252,18 +253,18 @@ private fun SectionCard(titulo: String, content: @Composable ColumnScope.() -> U
 @Composable
 fun PantallaPrincipal(context: Context) {
 
-    var sistemaActivo by remember { mutableStateOf(true) }
-    var estado by remember { mutableStateOf("Seguro") }
+    var sistemaActivo      by remember { mutableStateOf(true) }
+    var estado             by remember { mutableStateOf("Seguro") }
     var bluetoothConectado by remember { mutableStateOf(false) }
-    var historial by remember { mutableStateOf(listOf<String>()) }
-    var mostrarAcerca by remember { mutableStateOf(false) }
+    var historial          by remember { mutableStateOf(listOf<String>()) }
+    var mostrarAcerca      by remember { mutableStateOf(false) }
 
-    // ── MediaPlayer controlado como estado para poder detenerlo ──────────────
+    // ── MediaPlayer como estado para controlarlo globalmente ─────────────────
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
     fun detenerSonido() {
         mediaPlayer?.let {
-            if (it.isPlaying) it.stop()
+            runCatching { if (it.isPlaying) it.stop() }
             it.release()
         }
         mediaPlayer = null
@@ -271,22 +272,26 @@ fun PantallaPrincipal(context: Context) {
 
     fun iniciarSonidoAlerta() {
         detenerSonido()
-        try {
+        runCatching {
             val uri = android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI
             val mp = MediaPlayer().apply {
-                setAudioStreamType(AudioManager.STREAM_ALARM)
+                // ✅ FIX 3: setAudioAttributes reemplaza el deprecated setAudioStreamType
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
                 setDataSource(context, uri)
                 isLooping = true
                 prepare()
                 start()
             }
             mediaPlayer = mp
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
-    // Limpiar al salir del composable
+    // Liberar recursos al destruir el composable
     DisposableEffect(Unit) {
         onDispose { detenerSonido() }
     }
@@ -303,6 +308,7 @@ fun PantallaPrincipal(context: Context) {
     fun cambiarEstado(nuevoEstado: String, evento: String) {
         estado = nuevoEstado
         agregarEvento(evento)
+        // ✅ FIX BUG SONIDO: se detiene correctamente al salir del estado Alerta
         if (nuevoEstado == "Alerta" && sistemaActivo) {
             iniciarSonidoAlerta()
         } else {
@@ -315,7 +321,6 @@ fun PantallaPrincipal(context: Context) {
         return
     }
 
-    // ── Colores según estado ─────────────────────────────────────────────────
     val colorEstado = when (estado) {
         "Seguro"      -> AppColors.green
         "Advertencia" -> AppColors.amber
@@ -329,7 +334,6 @@ fun PantallaPrincipal(context: Context) {
         else          -> AppColors.inactive
     }
 
-    // ── Animación pulsante en Alerta ─────────────────────────────────────────
     val infiniteTransition = rememberInfiniteTransition(label = "alerta")
     val pulseAlpha by infiniteTransition.animateFloat(
         initialValue = 0.25f,
@@ -337,17 +341,8 @@ fun PantallaPrincipal(context: Context) {
         animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
         label = "pulseAlpha"
     )
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.97f,
-        targetValue = 1.03f,
-        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-        label = "pulseScale"
-    )
+    val iconAlpha = if (estado == "Alerta") pulseAlpha else 1f
 
-    val iconAlpha  = if (estado == "Alerta") pulseAlpha else 1f
-    val cardScale  = if (estado == "Alerta") pulseScale else 1f
-
-    // ── Layout ───────────────────────────────────────────────────────────────
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -358,7 +353,7 @@ fun PantallaPrincipal(context: Context) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        // ── Top bar ──────────────────────────────────────────────────────────
+        // ── Top bar ───────────────────────────────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -378,7 +373,6 @@ fun PantallaPrincipal(context: Context) {
                     fontSize = 12.sp
                 )
             }
-            // Pill de estado del sistema
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
@@ -435,7 +429,6 @@ fun PantallaPrincipal(context: Context) {
 
                 Spacer(Modifier.height(20.dp))
 
-                // Ícono con fondo circular
                 Box(
                     modifier = Modifier
                         .size(80.dp)
@@ -539,25 +532,20 @@ fun PantallaPrincipal(context: Context) {
                 .padding(bottom = 12.dp)
         )
 
-        // Activar / Desactivar sistema
         AppButton(
             label = if (sistemaActivo) "Desactivar sistema" else "Activar sistema",
-            icon = if (sistemaActivo) Icons.Default.PowerSettingsNew else Icons.Default.PowerSettingsNew,
+            icon = Icons.Default.PowerSettingsNew,
             containerColor = if (sistemaActivo) AppColors.surface else AppColors.greenDim,
             contentColor = if (sistemaActivo) AppColors.red else AppColors.green,
             borderColor = if (sistemaActivo) AppColors.red.copy(0.3f) else AppColors.green.copy(0.3f)
         ) {
             sistemaActivo = !sistemaActivo
-            if (!sistemaActivo) {
-                cambiarEstado("Desactivado", "Sistema desactivado")
-            } else {
-                cambiarEstado("Seguro", "Sistema activado")
-            }
+            if (!sistemaActivo) cambiarEstado("Desactivado", "Sistema desactivado")
+            else                cambiarEstado("Seguro", "Sistema activado")
         }
 
         Spacer(Modifier.height(8.dp))
 
-        // Simular conexión BT
         AppButton(
             label = if (bluetoothConectado) "Desconectar dispositivo" else "Conectar dispositivo",
             icon = Icons.Default.Bluetooth,
@@ -571,7 +559,6 @@ fun PantallaPrincipal(context: Context) {
 
         Spacer(Modifier.height(8.dp))
 
-        // Simular advertencia
         AppButton(
             label = "Simular advertencia",
             icon = Icons.Default.Warning,
@@ -584,7 +571,6 @@ fun PantallaPrincipal(context: Context) {
 
         Spacer(Modifier.height(8.dp))
 
-        // Simular alerta
         AppButton(
             label = "Simular alerta",
             icon = Icons.Default.Report,
@@ -597,7 +583,6 @@ fun PantallaPrincipal(context: Context) {
 
         Spacer(Modifier.height(8.dp))
 
-        // Restablecer estado
         AppButton(
             label = "Restablecer estado",
             icon = Icons.Default.Refresh,
@@ -643,22 +628,20 @@ fun PantallaPrincipal(context: Context) {
             Spacer(Modifier.height(14.dp))
 
             if (historial.isEmpty()) {
-                Text(
-                    "Sin registros aún",
-                    color = AppColors.textMuted,
-                    fontSize = 13.sp
-                )
+                Text("Sin registros aún", color = AppColors.textMuted, fontSize = 13.sp)
             } else {
                 historial.take(5).forEachIndexed { index, evento ->
-                    val (hora, msg) = evento.split("  ", limit = 2).let {
-                        if (it.size == 2) it[0] to it[1] else "—" to evento
-                    }
+                    val partes = evento.split("  ", limit = 2)
+                    val hora   = if (partes.size == 2) partes[0] else "—"
+                    val msg    = if (partes.size == 2) partes[1] else evento
+
                     val colorEvento = when {
-                        "ALERTA" in msg     -> AppColors.red
-                        "sospechosa" in msg -> AppColors.amber
-                        "conectado" in msg || "activado" in msg -> AppColors.green
-                        else                -> AppColors.textSecondary
+                        "ALERTA"     in msg                       -> AppColors.red
+                        "sospechosa" in msg                       -> AppColors.amber
+                        "conectado"  in msg || "activado" in msg  -> AppColors.green
+                        else                                      -> AppColors.textSecondary
                     }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -678,8 +661,10 @@ fun PantallaPrincipal(context: Context) {
                             Text(hora, color = AppColors.textMuted, fontSize = 11.sp)
                         }
                     }
+
+                    // ✅ FIX 4: HorizontalDivider reemplaza el deprecated Divider
                     if (index < minOf(historial.size, 5) - 1) {
-                        Divider(
+                        HorizontalDivider(
                             color = AppColors.surfaceBorder,
                             thickness = 0.5.dp,
                             modifier = Modifier.padding(start = 16.dp)
@@ -691,13 +676,8 @@ fun PantallaPrincipal(context: Context) {
 
         Spacer(Modifier.height(24.dp))
 
-        // ── Footer ────────────────────────────────────────────────────────────
         TextButton(onClick = { mostrarAcerca = true }) {
-            Text(
-                "Acerca del proyecto",
-                color = AppColors.textSecondary,
-                fontSize = 13.sp
-            )
+            Text("Acerca del proyecto", color = AppColors.textSecondary, fontSize = 13.sp)
         }
 
         Text(
