@@ -1,43 +1,60 @@
 package com.example.mochila
 
 import android.media.MediaPlayer
+import android.media.AudioManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.core.*
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.RepeatMode
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 
+// ─── Paleta de colores centralizada ───────────────────────────────────────────
+private object AppColors {
+    val background   = Color(0xFF070A0F)
+    val surface      = Color(0xFF0E1420)
+    val surfaceBorder = Color(0xFF1C2333)
+    val textPrimary  = Color(0xFFE8EDF4)
+    val textSecondary = Color(0xFF6B7585)
+    val textMuted    = Color(0xFF3D4655)
+    val green        = Color(0xFF2DD4A0)
+    val greenDim     = Color(0xFF1A5C45)
+    val amber        = Color(0xFFF0B429)
+    val amberDim     = Color(0xFF5C450D)
+    val red          = Color(0xFFEF4B6C)
+    val redDim       = Color(0xFF5C1525)
+    val blue         = Color(0xFF4F8EF7)
+    val inactive     = Color(0xFF2A3040)
+}
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         crearCanalNotificaciones()
-
         setContent {
             PantallaPrincipal(this)
         }
@@ -56,48 +73,182 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
+// ─── Pantalla Acerca ──────────────────────────────────────────────────────────
 @Composable
 fun PantallaAcerca(onVolver: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF070A0F))
-            .padding(horizontal = 22.dp)
-            .padding(top = 70.dp, bottom = 20.dp)
+            .background(AppColors.background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+            .padding(top = 60.dp, bottom = 40.dp)
     ) {
-
-        Button(
-            onClick = onVolver,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1C222B),
-                contentColor = Color.White
+        // Header con botón volver
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = onVolver,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(AppColors.surface)
+                    .border(1.dp, AppColors.surfaceBorder, CircleShape)
+            ) {
+                Icon(
+                    Icons.Default.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = AppColors.textPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Text(
+                "Acerca del proyecto",
+                color = AppColors.textPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold
             )
-        ) {
-            Text("← Volver")
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(Modifier.height(36.dp))
 
-        Text("Acerca del proyecto", color = Color.White, fontSize = 26.sp)
+        // Logo / nombre
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(AppColors.surface)
+                .border(1.dp, AppColors.surfaceBorder, RoundedCornerShape(16.dp))
+                .padding(30.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(AppColors.greenDim, AppColors.background)
+                            )
+                        )
+                        .border(1.dp, AppColors.green.copy(alpha = 0.4f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Shield,
+                        contentDescription = null,
+                        tint = AppColors.green,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    "BACK UP",
+                    color = AppColors.textPrimary,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 4.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Sistema de seguridad inteligente",
+                    color = AppColors.textSecondary,
+                    fontSize = 13.sp
+                )
+            }
+        }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
 
-        Text(
-            "BACK UP es una aplicación desarrollada con fines educativos, orientada a la detección de accesos no autorizados en mochilas mediante sensores físicos conectados a un ESP32.",
-            color = Color(0xFFB0B7C3)
+        // Descripción
+        InfoCard(
+            titulo = "Descripción",
+            contenido = "BACK UP es una aplicación educativa orientada a la detección de accesos no autorizados en mochilas, mediante sensores físicos conectados a un microcontrolador ESP32 vía Bluetooth."
         )
 
-        Spacer(modifier = Modifier.height(15.dp))
+        Spacer(Modifier.height(12.dp))
+
+        InfoCard(
+            titulo = "Arquitectura del sistema",
+            contenido = "El sistema combina múltiples lecturas de sensores para reducir falsos positivos. La lógica de detección evalúa umbrales antes de escalar el nivel de alerta, priorizando la confiabilidad."
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        // Stack tecnológico
+        SectionCard(titulo = "Stack tecnológico") {
+            listOf(
+                "Kotlin + Jetpack Compose" to "Interfaz nativa Android",
+                "ESP32 (Bluetooth)" to "Microcontrolador IoT",
+                "Sensores de apertura" to "Detección física",
+                "Material Design 3" to "Sistema de diseño"
+            ).forEach { (tech, desc) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.green)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(tech, color = AppColors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text(desc, color = AppColors.textSecondary, fontSize = 12.sp)
+                    }
+                }
+                if (tech != "Material Design 3")
+                    Divider(color = AppColors.surfaceBorder, thickness = 0.5.dp)
+            }
+        }
+
+        Spacer(Modifier.height(32.dp))
 
         Text(
-            "El sistema combina múltiples lecturas para reducir falsos positivos y mejorar la confiabilidad de las alertas.",
-            color = Color(0xFFB0B7C3)
+            "Proyecto académico — Uso educativo",
+            color = AppColors.textMuted,
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }
 
+@Composable
+private fun InfoCard(titulo: String, contenido: String) {
+    SectionCard(titulo = titulo) {
+        Text(contenido, color = AppColors.textSecondary, fontSize = 14.sp, lineHeight = 22.sp)
+    }
+}
 
+@Composable
+private fun SectionCard(titulo: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(AppColors.surface)
+            .border(1.dp, AppColors.surfaceBorder, RoundedCornerShape(14.dp))
+            .padding(18.dp)
+    ) {
+        Text(
+            titulo.uppercase(),
+            color = AppColors.textSecondary,
+            fontSize = 11.sp,
+            letterSpacing = 1.5.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(12.dp))
+        content()
+    }
+}
+
+// ─── Pantalla Principal ───────────────────────────────────────────────────────
 @Composable
 fun PantallaPrincipal(context: Context) {
 
@@ -107,265 +258,482 @@ fun PantallaPrincipal(context: Context) {
     var historial by remember { mutableStateOf(listOf<String>()) }
     var mostrarAcerca by remember { mutableStateOf(false) }
 
+    // ── MediaPlayer controlado como estado para poder detenerlo ──────────────
+    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+
+    fun detenerSonido() {
+        mediaPlayer?.let {
+            if (it.isPlaying) it.stop()
+            it.release()
+        }
+        mediaPlayer = null
+    }
+
+    fun iniciarSonidoAlerta() {
+        detenerSonido()
+        try {
+            val uri = android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI
+            val mp = MediaPlayer().apply {
+                setAudioStreamType(AudioManager.STREAM_ALARM)
+                setDataSource(context, uri)
+                isLooping = true
+                prepare()
+                start()
+            }
+            mediaPlayer = mp
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    // Limpiar al salir del composable
+    DisposableEffect(Unit) {
+        onDispose { detenerSonido() }
+    }
+
     fun horaActual(): String {
-        val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+        val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
         return sdf.format(java.util.Date())
     }
 
     fun agregarEvento(evento: String) {
-        historial = listOf("${horaActual()} - $evento") + historial
+        historial = listOf("${horaActual()}  $evento") + historial
     }
 
-    fun sonidoAlerta() {
-
-
-
-        val mediaPlayer = MediaPlayer.create(
-            context,
-            android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI
-        )
-        mediaPlayer.start()
+    fun cambiarEstado(nuevoEstado: String, evento: String) {
+        estado = nuevoEstado
+        agregarEvento(evento)
+        if (nuevoEstado == "Alerta" && sistemaActivo) {
+            iniciarSonidoAlerta()
+        } else {
+            detenerSonido()
+        }
     }
 
     if (mostrarAcerca) {
-        PantallaAcerca(
-            onVolver = { mostrarAcerca = false }
-        )
+        PantallaAcerca(onVolver = { mostrarAcerca = false })
         return
     }
 
-
+    // ── Colores según estado ─────────────────────────────────────────────────
     val colorEstado = when (estado) {
-        "Seguro" -> Color(0xFF4DD6A7)
-        "Advertencia" -> Color(0xFFE6B450)
-        "Alerta" -> Color(0xFFE85D75)
-        "Desactivado" -> Color(0xFF8A8F98)
-        else -> Color.White
+        "Seguro"      -> AppColors.green
+        "Advertencia" -> AppColors.amber
+        "Alerta"      -> AppColors.red
+        else          -> AppColors.textSecondary
+    }
+    val colorEstadoDim = when (estado) {
+        "Seguro"      -> AppColors.greenDim
+        "Advertencia" -> AppColors.amberDim
+        "Alerta"      -> AppColors.redDim
+        else          -> AppColors.inactive
     }
 
-
-    val textoEstado = when (estado) {
-        "Seguro" -> "Sistema monitoreando"
-        "Advertencia" -> "Lectura sospechosa"
-        "Alerta" -> "Apertura no autorizada"
-        "Desactivado" -> "Sistema inactivo"
-        else -> "Estado desconocido"
-    }
-
-    // 🔥 ANIMACIÓN DE ALERTA
-    val infiniteTransition = rememberInfiniteTransition()
-    val alphaAnim by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
+    // ── Animación pulsante en Alerta ─────────────────────────────────────────
+    val infiniteTransition = rememberInfiniteTransition(label = "alerta")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.25f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600),
-            repeatMode = RepeatMode.Reverse
-        )
+        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+        label = "pulseAlpha"
+    )
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.97f,
+        targetValue = 1.03f,
+        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+        label = "pulseScale"
     )
 
-    val alphaFinal = if (estado == "Alerta") alphaAnim else 1f
+    val iconAlpha  = if (estado == "Alerta") pulseAlpha else 1f
+    val cardScale  = if (estado == "Alerta") pulseScale else 1f
 
+    // ── Layout ───────────────────────────────────────────────────────────────
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF070A0F))
-            .padding(horizontal = 22.dp)
-            .padding(top = 65.dp, bottom = 20.dp),
+            .background(AppColors.background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(top = 60.dp, bottom = 30.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Text("BACK UP", color = Color.White, fontSize = 34.sp)
-
-        Text(
-            "Seguridad inteligente",
-            color = Color(0xFF8B95A1),
-            fontSize = 13.sp
-        )
-
-        Spacer(modifier = Modifier.height(25.dp))
-
-        // 🔐 INDICADOR GENERAL
-        Text(
-            text = if (sistemaActivo) "Sistema activo" else "Sistema desactivado",
-            color = if (sistemaActivo) Color(0xFF4DD6A7) else Color(0xFFE85D75),
-            fontSize = 13.sp
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // 🔵 TARJETA ESTADO (CENTRADA + ANIMADA)
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF111722)),
-            modifier = Modifier.fillMaxWidth()
+        // ── Top bar ──────────────────────────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                Text("ESTADO DEL SISTEMA", color = Color(0xFF7D8793), fontSize = 12.sp)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Icon(
-                    imageVector = when (estado) {
-                        "Seguro" -> Icons.Default.Lock
-                        "Advertencia" -> Icons.Default.Warning
-                        "Alerta" -> Icons.Default.Report
-                        else -> Icons.Default.Lock
-                    },
-                    contentDescription = null,
-                    tint = colorEstado.copy(alpha = alphaFinal),
-                    modifier = Modifier.size(50.dp)
+            Column {
+                Text(
+                    "BACK UP",
+                    color = AppColors.textPrimary,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 3.sp
                 )
+                Text(
+                    "Seguridad inteligente",
+                    color = AppColors.textSecondary,
+                    fontSize = 12.sp
+                )
+            }
+            // Pill de estado del sistema
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (sistemaActivo) AppColors.greenDim else AppColors.inactive)
+                    .border(
+                        1.dp,
+                        if (sistemaActivo) AppColors.green.copy(0.4f) else AppColors.surfaceBorder,
+                        RoundedCornerShape(50)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(if (sistemaActivo) AppColors.green else AppColors.textMuted)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        if (sistemaActivo) "Activo" else "Inactivo",
+                        color = if (sistemaActivo) AppColors.green else AppColors.textMuted,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(28.dp))
+
+        // ── Tarjeta de estado principal ───────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(AppColors.surface)
+                .border(
+                    1.dp,
+                    colorEstado.copy(alpha = if (estado == "Alerta") iconAlpha * 0.6f else 0.25f),
+                    RoundedCornerShape(20.dp)
+                )
+                .padding(28.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "ESTADO DEL SISTEMA",
+                    color = AppColors.textSecondary,
+                    fontSize = 11.sp,
+                    letterSpacing = 2.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                // Ícono con fondo circular
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(colorEstadoDim)
+                        .border(1.dp, colorEstado.copy(alpha = iconAlpha * 0.5f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = when (estado) {
+                            "Seguro"      -> Icons.Default.Lock
+                            "Advertencia" -> Icons.Default.Warning
+                            "Alerta"      -> Icons.Default.Report
+                            else          -> Icons.Default.LockOpen
+                        },
+                        contentDescription = null,
+                        tint = colorEstado.copy(alpha = iconAlpha),
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
 
                 Text(
                     estado,
                     color = colorEstado,
-                    fontSize = 38.sp
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold
                 )
 
+                Spacer(Modifier.height(4.dp))
+
                 Text(
-                    textoEstado,
-                    color = Color(0xFFB0B7C3),
-                    fontSize = 14.sp
+                    when (estado) {
+                        "Seguro"      -> "Todos los sensores en reposo"
+                        "Advertencia" -> "Lectura sospechosa detectada"
+                        "Alerta"      -> "Apertura no autorizada confirmada"
+                        else          -> "Monitoreo detenido"
+                    },
+                    color = AppColors.textSecondary,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(Modifier.height(14.dp))
 
-        // 📡 BLUETOOTH PRO
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF111722)),
-            modifier = Modifier.fillMaxWidth()
+        // ── Conectividad Bluetooth ────────────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(AppColors.surface)
+                .border(1.dp, AppColors.surfaceBorder, RoundedCornerShape(14.dp))
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(modifier = Modifier.padding(18.dp)) {
-                Text("Conectividad", color = Color(0xFF8B95A1), fontSize = 12.sp)
-
-                Text(
-                    if (bluetoothConectado) "Conectado a BACKUP-ESP32"
-                    else "Sin conexión",
-                    color = if (bluetoothConectado) Color(0xFF4DD6A7) else Color(0xFFE6B450),
-                    fontSize = 16.sp
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Bluetooth,
+                    contentDescription = null,
+                    tint = if (bluetoothConectado) AppColors.blue else AppColors.textSecondary,
+                    modifier = Modifier.size(20.dp)
                 )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(
-            onClick = {
-                sistemaActivo = !sistemaActivo
-                estado = if (!sistemaActivo) "Desactivado" else "Seguro"
-                agregarEvento(if (sistemaActivo) "Sistema activado" else "Sistema desactivado")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (sistemaActivo) Color(0xFF1C222B) else Color(0xFF4DD6A7),
-                contentColor = Color.White
-            )
-        ) {
-            Text(if (sistemaActivo) "Desactivar sistema" else "Activar sistema")
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Button(
-            onClick = {
-                bluetoothConectado = !bluetoothConectado
-                agregarEvento(if (bluetoothConectado) "Dispositivo conectado" else "Dispositivo desconectado")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1C222B),
-                contentColor = Color.White
-            )
-        ) {
-            Text("Simular conexión")
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Button(
-            onClick = {
-                estado = "Advertencia"
-                agregarEvento("Lectura sospechosa detectada")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFE6B450),
-                contentColor = Color.Black
-            )
-        ) {
-            Text("Simular advertencia")
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Button(
-            onClick = {
-                estado = "Alerta"
-                agregarEvento("ALERTA: apertura confirmada")
-
-                if (sistemaActivo) {
-                    sonidoAlerta()
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(
+                        "Dispositivo ESP32",
+                        color = AppColors.textPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        if (bluetoothConectado) "BACKUP-ESP32 · Conectado" else "Sin conexión",
+                        color = if (bluetoothConectado) AppColors.green else AppColors.textSecondary,
+                        fontSize = 12.sp
+                    )
                 }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFE85D75),
-                contentColor = Color.White
+            }
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(if (bluetoothConectado) AppColors.green else AppColors.textMuted)
             )
-        ) {
-            Text("Simular alerta")
         }
 
-        Spacer(modifier = Modifier.height(22.dp))
+        Spacer(Modifier.height(20.dp))
 
-        // 📊 HISTORIAL PRO
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF111722)),
-            modifier = Modifier.fillMaxWidth()
+        // ── Controles ─────────────────────────────────────────────────────────
+        Text(
+            "CONTROLES",
+            color = AppColors.textSecondary,
+            fontSize = 11.sp,
+            letterSpacing = 2.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp)
+        )
+
+        // Activar / Desactivar sistema
+        AppButton(
+            label = if (sistemaActivo) "Desactivar sistema" else "Activar sistema",
+            icon = if (sistemaActivo) Icons.Default.PowerSettingsNew else Icons.Default.PowerSettingsNew,
+            containerColor = if (sistemaActivo) AppColors.surface else AppColors.greenDim,
+            contentColor = if (sistemaActivo) AppColors.red else AppColors.green,
+            borderColor = if (sistemaActivo) AppColors.red.copy(0.3f) else AppColors.green.copy(0.3f)
         ) {
-            Column(modifier = Modifier.padding(18.dp)) {
+            sistemaActivo = !sistemaActivo
+            if (!sistemaActivo) {
+                cambiarEstado("Desactivado", "Sistema desactivado")
+            } else {
+                cambiarEstado("Seguro", "Sistema activado")
+            }
+        }
 
-                Text("Historial de eventos", color = Color.White, fontSize = 18.sp)
+        Spacer(Modifier.height(8.dp))
 
-                Spacer(modifier = Modifier.height(10.dp))
+        // Simular conexión BT
+        AppButton(
+            label = if (bluetoothConectado) "Desconectar dispositivo" else "Conectar dispositivo",
+            icon = Icons.Default.Bluetooth,
+            containerColor = AppColors.surface,
+            contentColor = AppColors.blue,
+            borderColor = AppColors.blue.copy(0.25f)
+        ) {
+            bluetoothConectado = !bluetoothConectado
+            agregarEvento(if (bluetoothConectado) "Dispositivo conectado" else "Dispositivo desconectado")
+        }
 
-                if (historial.isEmpty()) {
-                    Text("Sin registros", color = Color(0xFF8B95A1))
-                } else {
-                    historial.take(4).forEach {
-                        Text("• $it", color = Color(0xFFB0B7C3), fontSize = 13.sp)
+        Spacer(Modifier.height(8.dp))
+
+        // Simular advertencia
+        AppButton(
+            label = "Simular advertencia",
+            icon = Icons.Default.Warning,
+            containerColor = AppColors.amberDim,
+            contentColor = AppColors.amber,
+            borderColor = AppColors.amber.copy(0.3f)
+        ) {
+            if (sistemaActivo) cambiarEstado("Advertencia", "Lectura sospechosa detectada")
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Simular alerta
+        AppButton(
+            label = "Simular alerta",
+            icon = Icons.Default.Report,
+            containerColor = AppColors.redDim,
+            contentColor = AppColors.red,
+            borderColor = AppColors.red.copy(0.3f)
+        ) {
+            if (sistemaActivo) cambiarEstado("Alerta", "ALERTA: apertura no autorizada confirmada")
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Restablecer estado
+        AppButton(
+            label = "Restablecer estado",
+            icon = Icons.Default.Refresh,
+            containerColor = AppColors.surface,
+            contentColor = AppColors.textSecondary,
+            borderColor = AppColors.surfaceBorder
+        ) {
+            if (sistemaActivo) cambiarEstado("Seguro", "Estado restablecido manualmente")
+        }
+
+        Spacer(Modifier.height(22.dp))
+
+        // ── Historial de eventos ──────────────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(AppColors.surface)
+                .border(1.dp, AppColors.surfaceBorder, RoundedCornerShape(14.dp))
+                .padding(18.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "HISTORIAL DE EVENTOS",
+                    color = AppColors.textSecondary,
+                    fontSize = 11.sp,
+                    letterSpacing = 2.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                if (historial.isNotEmpty()) {
+                    Text(
+                        "${historial.size} eventos",
+                        color = AppColors.textMuted,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            if (historial.isEmpty()) {
+                Text(
+                    "Sin registros aún",
+                    color = AppColors.textMuted,
+                    fontSize = 13.sp
+                )
+            } else {
+                historial.take(5).forEachIndexed { index, evento ->
+                    val (hora, msg) = evento.split("  ", limit = 2).let {
+                        if (it.size == 2) it[0] to it[1] else "—" to evento
+                    }
+                    val colorEvento = when {
+                        "ALERTA" in msg     -> AppColors.red
+                        "sospechosa" in msg -> AppColors.amber
+                        "conectado" in msg || "activado" in msg -> AppColors.green
+                        else                -> AppColors.textSecondary
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 5.dp)
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(colorEvento)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text(msg, color = AppColors.textPrimary, fontSize = 13.sp)
+                            Text(hora, color = AppColors.textMuted, fontSize = 11.sp)
+                        }
+                    }
+                    if (index < minOf(historial.size, 5) - 1) {
+                        Divider(
+                            color = AppColors.surfaceBorder,
+                            thickness = 0.5.dp,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
                     }
                 }
             }
         }
 
-        TextButton(
-            onClick = {
-                mostrarAcerca = true
-            }
-        ) {
+        Spacer(Modifier.height(24.dp))
+
+        // ── Footer ────────────────────────────────────────────────────────────
+        TextButton(onClick = { mostrarAcerca = true }) {
             Text(
                 "Acerca del proyecto",
-                color = Color(0xFF68707C),
-                fontSize = 12.sp
+                color = AppColors.textSecondary,
+                fontSize = 13.sp
             )
         }
 
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // 📚 TEXTO EDUCATIVO
         Text(
-            text = "Aplicación desarrollada con fines educativos, orientada a la detección de accesos no autorizados mediante sensores y comunicación inalámbrica.",
-            color = Color(0xFF68707C),
-            fontSize = 11.sp
+            "Proyecto educativo · Detección de accesos no autorizados",
+            color = AppColors.textMuted,
+            fontSize = 11.sp,
+            textAlign = TextAlign.Center
         )
+    }
+}
+
+// ─── Componente de botón reutilizable ─────────────────────────────────────────
+@Composable
+private fun AppButton(
+    label: String,
+    icon: ImageVector,
+    containerColor: Color,
+    contentColor: Color,
+    borderColor: Color,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        ),
+        elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp)
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(10.dp))
+        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
